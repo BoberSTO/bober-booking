@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOBER Бронювання</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f1f5f9;
+      padding: 20px;
+      color: #1f2937;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #1e3a8a;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s;
+    }
+
+    button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .warning {
+      background: #facc15;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .success {
+      background: #4ade80;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Запис до автосервісу BOBER</h2>
+
+    <div id="warning" class="warning"></div>
+    <div id="success" class="success"></div>
+
+    <form id="bookingForm">
+      <input type="text" name="name" placeholder="Ім’я *" required>
+      <input type="tel" name="phone" placeholder="Телефон *" required>
+      <input type="email" name="email" placeholder="Email *" required>
+
+      <select name="service" required>
+        <option value="">Оберіть послугу *</option>
+        <option value="Заміна мастила та фільтрів">Заміна мастила та фільтрів</option>
+        <option value="Ремонт ходової">Ремонт ходової</option>
+        <option value="Діагностика">Діагностика</option>
+        <option value="Інше">Інше</option>
+      </select>
+
+      <textarea name="details" placeholder="Деталі (необов’язково)"></textarea>
+
+      <input type="date" name="date" required min="">
+      <select name="time" required>
+        <option value="">Оберіть час *</option>
+        <!-- Додається динамічно -->
+      </select>
+
+      <button type="submit" disabled>Забронювати</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('bookingForm');
+    const warning = document.getElementById('warning');
+    const success = document.getElementById('success');
+    const dateInput = form.date;
+    const timeSelect = form.time;
+    const submitBtn = form.querySelector('button');
+
+    // Задати мінімальну дату (сьогодні)
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+
+    // Генерація часу (8:00 - 19:00)
+    const generateTimes = () => {
+      timeSelect.innerHTML = '<option value="">Оберіть час *</option>';
+      for (let h = 8; h <= 19; h++) {
+        const hour = h.toString().padStart(2, '0') + ':00';
+        timeSelect.innerHTML += `<option value="${hour}">${hour}</option>`;
+      }
+    }
+
+    generateTimes();
+
+    // Активувати кнопку після заповнення
+    form.addEventListener('input', () => {
+      const filled = [...form.elements].every(el => el.required ? el.value.trim() !== '' : true);
+      submitBtn.disabled = !filled;
+      warning.style.display = filled ? 'none' : 'block';
+      warning.textContent = filled ? '' : 'Заповніть усі обов’язкові поля!';
+    });
+
+    // Відправка форми
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+
+      const formData = {
+        name: form.name.value.trim(),
+        phone: form.phone.value.trim(),
+        email: form.email.value.trim(),
+        service: form.service.value,
+        details: form.details.value.trim(),
+        date: form.date.value,
+        time: form.time.value,
+      };
+
+      try {
+        const res = await fetch('https://script.google.com/macros/s/AKfycbzHVRVOTNrDgatyx7UPhDMGIr8i3B63MBE5DgQYk2qAlvi_etC4aiplUTq5s_w-Tc0sTw/exec', {
+          method: 'POST',
+          body: JSON.stringify(formData),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          success.style.display = 'block';
+          warning.style.display = 'none';
+          success.textContent = result.message;
+          form.reset();
+          submitBtn.disabled = true;
+        } else {
+          warning.style.display = 'block';
+          warning.textContent = result.message || 'Помилка при бронюванні.';
+        }
+      } catch (err) {
+        warning.style.display = 'block';
+        warning.textContent = 'Сталася помилка під час відправлення.';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
